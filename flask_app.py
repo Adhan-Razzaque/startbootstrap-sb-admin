@@ -1,9 +1,9 @@
 from flask import Flask, request, render_template
 app = Flask(__name__)
 
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET', 'POST'])
 def main():
-    return render_template("index.html")
+    return render_template("login.html")
 
 @app.route('/charts', methods=['GET'])
 def charts():
@@ -28,6 +28,10 @@ def register():
 @app.route('/tables', methods=['GET'])
 def tables():
     return render_template('tables.html')
+
+@app.route('/home', methods=['GET'])
+def home():
+    return render_template("index.html")
 
 @app.errorhandler(404)
 def page_not_found(e):
