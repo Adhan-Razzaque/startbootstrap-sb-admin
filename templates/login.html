@@ -9,7 +9,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>SB Admin - Login</title>
+    <title>Login</title>
 
     <!-- Bootstrap core CSS-->
     <link href="static/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -28,16 +28,16 @@
       <div class="card card-login mx-auto mt-5">
         <div class="card-header">Login</div>
         <div class="card-body">
-          <form>
+          <form action="" method="post">
             <div class="form-group">
               <div class="form-label-group">
-                <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required="required" autofocus="autofocus">
+                <input type="email" id="inputEmail" class="form-control" name="email" placeholder="Email address" required="required" autofocus="autofocus" value="{{ request.form.email }}">
                 <label for="inputEmail">Email address</label>
               </div>
             </div>
             <div class="form-group">
               <div class="form-label-group">
-                <input type="password" id="inputPassword" class="form-control" placeholder="Password" required="required">
+                <input type="password" id="inputPassword" class="form-control" name="password" placeholder="Password" required="required" value="{{ request.form.password }}">
                 <label for="inputPassword">Password</label>
               </div>
             </div>
@@ -51,6 +51,9 @@
             </div>
             <a class="btn btn-primary btn-block" href="{{ url_for('login') }}">Login</a>
           </form>
+          {% if error %}
+            <p class="error"><strong>Error:</strong> {{ error}}</p>
+          {% endif %}
           <div class="text-center">
             <a class="d-block small mt-3" href="{{ url_for('register') }}">Register an Account</a>
             <a class="d-block small" href="{{ url_for('forgot_password') }}">Forgot Password?</a>

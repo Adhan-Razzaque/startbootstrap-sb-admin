@@ -1,9 +1,9 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def main():
-    return render_template("login.html")
+    return render_template("index.html")
 
 @app.route('/charts', methods=['GET'])
 def charts():
@@ -17,9 +17,15 @@ def blank():
 def forgot_password():
     return render_template('forgot-password.html')
 
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    error = None
+    if request.method == 'POST':
+        if request.form['email'] != 'admin@admin.com' or request.form['password'] != 'admin':
+            error = 'Invalid Credentials. Please try again.'
+        else:
+            return redirect(url_for('main'))
+    return render_template('login.html', error)
 
 @app.route('/register', methods=['GET'])
 def register():
