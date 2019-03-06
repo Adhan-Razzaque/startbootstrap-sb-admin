@@ -1,4 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for
+# from werkzeug.security import generate_password_hash, check_password_hash
+# from flask_login import LoginManager
 app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
@@ -38,6 +40,10 @@ def tables():
 @app.route('/home', methods=['GET'])
 def home():
     return render_template("index.html")
+
+@app.route('/contactme', methods=['GET', 'POST'])
+def contactme():
+    return render_template("contact.html")
 
 @app.errorhandler(404)
 def page_not_found(e):
