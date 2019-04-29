@@ -1,10 +1,10 @@
 from flask import Flask, render_template, Response, redirect, url_for, flash
-from flask_login import LoginManager, login_required, UserMixin
+from flask_login import LoginManager, login_required, UserMixin, current_user, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
 from forms import LoginForm
-from flask_migrate import Migrate
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -14,50 +14,45 @@ app.config.from_object(Config)
 
 # MySQL database connection
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
 # login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
-# class User(UserMixin):
-
-#     def __init__(self, username, password_hash):
-#         self.username = username
-#         self.password_hash = password_hash
-
-#     def check_password(self, password):
-#         return check_password_hash(self.password_hash, password)
-
-#     def get_id(self):
-#         return self.username
-class User(db.Model):
+# User Class: builds User objects for storage in MySQL database
+class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
+    employees = db.relationship('Employees', backref='manager', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
 
-# all_users = {
-#     "admin": User("admin@email.com", generate_password_hash("secret")),
-#     "bob": User("bob@email.com", generate_password_hash("less-secret")),
-#     "caroline": User("caroline@email.com", generate_password_hash("completely-secret")),
-# }
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Employees(db.Model):
+    __tablename__ = "employees"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True)
+    position = db.Column(db.String(64))
+    office = db.Column(db.String(64))
+    age = db.Column(db.Integer)
+    startdate = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    def __repr__(self):
+        return '<Employees {}>'.format(self.body)
 
 @login_manager.user_loader
-def load_user(user_id):
-    return all_users.get(user_id)
-
-class Employee(db.Model):
-
-    __tablename__ = "employees"
-
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String(4096))
+def load_user(id):
+    return User.query.get(int(id))
 
 
 @app.route('/', methods=['GET'])
@@ -78,10 +73,15 @@ def forgot_password():
 
 @app.route('/login', methods=['GET', 'POST']) #add POST method for login
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main'))
     form = LoginForm()
     if form.validate_on_submit():
-        flash('Login requested for user {}, remember_me={}'.format(
-            form.username.data, form.remember_me.data))
+        user = User.query.filter_by(username=form.username.data).first()
+        if user is None or not user.check_password(form.password.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
         return redirect(url_for('main'))
     return render_template('login.html', title='Sign In', form=form)
 
@@ -102,6 +102,11 @@ def home():
 @app.route('/contactme', methods=['GET', 'POST'])
 def contactme():
     return render_template("contact.html")
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main'))
 
 @app.errorhandler(404)
 def page_not_found(e):
