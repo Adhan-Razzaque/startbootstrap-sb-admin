@@ -1,59 +1,68 @@
-from flask import Flask, render_template, request, abort, redirect, Response, url_for
-from flask_login import LoginManager, login_required, UserMixin, login_user
+from flask import Flask, render_template, Response, redirect, url_for, flash
+from flask_login import LoginManager, login_required, UserMixin
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from config import Config
+from forms import LoginForm
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-#https://github.com/shekhargulati/flask-login-example/blob/master/flask-login-example.py
-#https://github.com/shekhargulati/flask-login-example/issues
-app.config['SECRET_KEY'] = 'a2BxpjeRLJBOyTWluc0NqA'
+# config class with all state variables
+app.config.from_object(Config)
+
+
+# MySQL database connection
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# login manager
 login_manager = LoginManager()
-login_manager.login_view = "login"
 login_manager.init_app(app)
 
-class User(UserMixin):
-    def __init__(self , username , password , id , active=True):
-        self.id = id
-        self.username = username
-        self.password = password
-        self.active = active
 
-    def get_id(self):
-        return self.id
+# class User(UserMixin):
 
-    def is_active(self):
-        return self.active
+#     def __init__(self, username, password_hash):
+#         self.username = username
+#         self.password_hash = password_hash
 
-    def get_auth_token(self):
-        return make_secure_token(self.username , key='a2BxpjeRLJBOyTWluc0NqA')
+#     def check_password(self, password):
+#         return check_password_hash(self.password_hash, password)
 
-class UsersRepository:
+#     def get_id(self):
+#         return self.username
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), index=True, unique=True)
+    email = db.Column(db.String(120), index=True, unique=True)
+    password_hash = db.Column(db.String(128))
 
-    def __init__(self):
-        self.users = dict()
-        self.users_id_dict = dict()
-        self.identifier = 0
+    def __repr__(self):
+        return '<User {}>'.format(self.username)
 
-    def save_user(self, user):
-        self.users_id_dict.setdefault(user.id, user)
-        self.users.setdefault(user.username, user)
+# all_users = {
+#     "admin": User("admin@email.com", generate_password_hash("secret")),
+#     "bob": User("bob@email.com", generate_password_hash("less-secret")),
+#     "caroline": User("caroline@email.com", generate_password_hash("completely-secret")),
+# }
 
-    def get_user(self, username):
-        return self.users.get(username)
+@login_manager.user_loader
+def load_user(user_id):
+    return all_users.get(user_id)
 
-    def get_user_by_id(self, userid):
-        return self.users_id_dict.get(userid)
+class Employee(db.Model):
 
-    def next_index(self):
-        self.identifier +=1
-        return self.identifier
+    __tablename__ = "employees"
 
-users_repository = UsersRepository()
-
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(4096))
 
 
 @app.route('/', methods=['GET'])
 def main():
-    return render_template("index.html")
+    return render_template('index.html')
 
 @app.route('/charts', methods=['GET'])
 def charts():
@@ -69,32 +78,16 @@ def forgot_password():
 
 @app.route('/login', methods=['GET', 'POST']) #add POST method for login
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        remLog = request.form['remember-me']
-        registeredUser = users_repository.get_user(username)
-        print('Users '+ str(users_repository.users))
-        print('Register user %s , password %s' % (registeredUser.username, registeredUser.password))
-        if registeredUser != None and registeredUser.password == password:
-            print('Logged in..')
-            login_user(registeredUser, remember=remLog)
-            return redirect(url_for('home'))
-        else:
-            return abort(401)
-    else:
-        return render_template('login.html')
+    form = LoginForm()
+    if form.validate_on_submit():
+        flash('Login requested for user {}, remember_me={}'.format(
+            form.username.data, form.remember_me.data))
+        return redirect(url_for('main'))
+    return render_template('login.html', title='Sign In', form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        new_user = User(username , password , users_repository.next_index())
-        users_repository.save_user(new_user)
-        return Response("Registered Successfully")
-    else:
         return render_template('register.html')
 
 @app.route('/tables', methods=['GET'])
@@ -117,12 +110,8 @@ def page_not_found(e):
 # handle login failed
 @app.errorhandler(401)
 def login_failure(e):
-    return Response('<p>Login failed</p>')
+    return Response("Login Failed")
 
-# callback to reload the user object
-@login_manager.user_loader
-def load_user(userid):
-    return users_repository.get_user_by_id(userid)
 
 if __name__ == '__main__':
     app.run()

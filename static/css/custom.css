@@ -1,0 +1,17 @@
+.mr-5{
+    color: #FFF !important;
+}
+.scroll-to-top.rounded{
+    color: #000000a1;
+}
+.page-item.active .page-link{
+    color: #FFF;
+    background-color: #bd0000;
+    border-color: #bd0000;
+}
+.page-link{
+    color: #b00;
+}
+.bg-warning{
+    background-color: #fbbc00 !important;
+}
