@@ -1,9 +1,12 @@
 from flask import Flask, render_template, Response, redirect, url_for, flash
 from flask_login import LoginManager, login_required, UserMixin, current_user, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-from forms import LoginForm
+
 from datetime import datetime
 
 app = Flask(__name__)
@@ -50,6 +53,31 @@ class Employees(db.Model):
     def __repr__(self):
         return '<Employees {}>'.format(self.body)
 
+# Forms
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Remember Me')
+    submit = SubmitField('Sign In')
+
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField(
+        'Repeat Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Register')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different username.')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is not None:
+            raise ValidationError('Please use a different email address.')
+
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
@@ -57,7 +85,7 @@ def load_user(id):
 
 @app.route('/', methods=['GET'])
 def main():
-    return render_template('index.html')
+    return render_template('blank.html')
 
 @app.route('/charts', methods=['GET'])
 def charts():
@@ -88,7 +116,17 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-        return render_template('register.html')
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Congratulations, you are now a registered user!')
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
 
 @app.route('/tables', methods=['GET'])
 @login_required
