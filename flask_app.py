@@ -6,8 +6,10 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-
 from datetime import datetime
+
+# Github to check out https://github.com/itzvnl/Flask-Webapplication-with-mysql
+
 
 app = Flask(__name__)
 
@@ -110,14 +112,14 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('login'))
         login_user(user, remember=form.remember_me.data)
-        return redirect(url_for('main'))
+        return redirect(url_for('user'))
     return render_template('login.html', title='Sign In', form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('user'))
     form = RegistrationForm()
     if form.validate_on_submit():
         user = User(username=form.username.data, email=form.email.data)
@@ -133,9 +135,13 @@ def register():
 def tables():
     return render_template('tables.html')
 
-@app.route('/home', methods=['GET'])
-def home():
-    return render_template("index.html")
+@app.route('/user/<username>', methods=['GET'])
+@login_required
+def user(username):
+    cur = db.cursor()
+    cur.execute("SELECT * FROM employees")
+    data = cur.fetchall()
+    return render_template('index.html', data=data)
 
 @app.route('/contactme', methods=['GET', 'POST'])
 def contactme():
