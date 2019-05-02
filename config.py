@@ -10,5 +10,5 @@ class Config(object):
         databasename="AdhanRazzaque$projectmgmtdb",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_POOL_RECYCLE = 299
+    SQLALCHEMY_POOL_RECYCLE = 280
 
